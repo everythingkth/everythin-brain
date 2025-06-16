@@ -1,34 +1,39 @@
-# memory_engine.py
+import os
+from openai import OpenAI
+import numpy as np
+from dotenv import load_dotenv
 
-import openai
-from vector_config import VECTOR_DB_CONFIG, EMBEDDING_MODEL
+load_dotenv()
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-# ✅ GPT API 키 설정 (렌더에서 환경변수로 관리할 예정)
-openai.api_key = "your_openai_api_key"
+EMBEDDING_MODEL = "text-embedding-ada-002"
 
+# 🔹 텍스트 임베딩
 def embed_text(text):
-    """텍스트를 벡터로 변환"""
-    response = openai.Embedding.create(
-        input=text,
-        model=EMBEDDING_MODEL
+    response = client.embeddings.create(
+        model=EMBEDDING_MODEL,
+        input=[text]
     )
-    return response['data'][0]['embedding']
+    return response.data[0].embedding
 
-def store_to_vector_db(text, metadata=None):
-    """벡터 DB에 텍스트 저장"""
-    embedding = embed_text(text)
+# 🔹 메모리 DB (예시: 로컬 리스트)
+memory_db = []
 
-    # 여기에 벡터 DB 저장 로직 구현 예정
-    # 예: Weaviate, Pinecone 등
+# 🔹 벡터 저장
+def store_to_vector_db(content, vector):
+    memory_db.append({"content": content, "vector": np.array(vector)})
 
-    print("✅ 저장 완료 (모의):", text[:30], "...")
+# 🔹 벡터 검색 (유사도 기반)
+def search_from_vector_db(query_vector, top_k=3):
+    def cosine_similarity(a, b):
+        return np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
 
-def search_from_vector_db(query):
-    """벡터 DB에서 관련 내용 검색"""
-    query_vector = embed_text(query)
-
-    # 벡터 DB에서 유사도 검색 로직 구현 예정
-    # 예: 가장 유사한 top-k 반환
-
-    print("🔍 검색 완료 (모의):", query)
-    return ["(예시) 검색 결과 1", "(예시) 검색 결과 2"]
+    results = [
+        {
+            "content": item["content"],
+            "score": cosine_similarity(query_vector, item["vector"])
+        }
+        for item in memory_db
+    ]
+    results.sort(key=lambda x: x["score"], reverse=True)
+    return results[:top_k]
