@@ -14,9 +14,12 @@ def store_memory():
     if not content:
         return jsonify({"error": "No content provided"}), 400
 
-    vector = embed_text(content)
-    store_to_vector_db(content, vector)
-    return jsonify({"status": "stored", "content": content})
+    try:
+        vector = embed_text(content)
+        store_to_vector_db(content, vector)
+        return jsonify({"status": "stored", "content": content})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.route("/search", methods=["POST"])
 def search_memory():
@@ -25,9 +28,12 @@ def search_memory():
     if not query:
         return jsonify({"error": "No query provided"}), 400
 
-    query_vector = embed_text(query)
-    results = search_from_vector_db(query_vector)
-    return jsonify({"results": results})
+    try:
+        query_vector = embed_text(query)
+        results = search_from_vector_db(query_vector)
+        return jsonify({"results": results})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
     app.run(debug=True)
